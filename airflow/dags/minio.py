@@ -11,8 +11,6 @@ import urllib.error
 
 
 def download_parquet(**kwargs):
-    # folder_path: str = r'..\..\data\raw'
-    # Construct the relative path to the folder
     url: str = "https://d37ci6vzurychx.cloudfront.net/trip-data/"
     filename: str = "yellow_tripdata"
     extension: str = ".parquet"
@@ -28,9 +26,7 @@ def download_parquet(**kwargs):
         raise RuntimeError(f"Failed to download the parquet file : {str(e)}") from e
 
 
-# Python Function
 def upload_file(**kwargs):
-    ###############################################
     # Upload generated file to Minio
 
     client = Minio(
@@ -65,7 +61,7 @@ def upload_file(**kwargs):
             os.remove(file_name)
             print(f"Deleted local file {file_name} after upload.")
 
-    # On supprime le fichié récement téléchargés, pour éviter la redondance. On suppose qu'en arrivant ici, l'ajout est
+    # On supprime le fichié récemment téléchargés, pour éviter la redondance. On suppose qu'en arrivant ici, l'ajout est
     # bien réalisé
     # os.remove(os.path.join("./", "yellow_tripdata_" + month + ".parquet"))
 

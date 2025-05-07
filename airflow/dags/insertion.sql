@@ -94,7 +94,25 @@ SELECT
     raw."congestion_surcharge",
     raw."Airport_fee"
 FROM dblink('db_conn', '
-    SELECT * FROM {table_name} LIMIT 10000
+    SELECT "VendorID",
+        "tpep_pickup_datetime",
+        "tpep_dropoff_datetime",
+        "passenger_count",
+        "trip_distance",
+        "RatecodeID",
+        "store_and_fwd_flag",
+        "PULocationID",
+        "DOLocationID",
+        "payment_type",
+        "fare_amount",
+        "extra",
+        "mta_tax",
+        "tip_amount",
+        "tolls_amount",
+        "improvement_surcharge",
+        "total_amount",
+        "congestion_surcharge",
+        "Airport_fee" FROM {table_name} LIMIT 10000
 ') AS raw(
     "VendorID" INT,
     "tpep_pickup_datetime" TIMESTAMP,
