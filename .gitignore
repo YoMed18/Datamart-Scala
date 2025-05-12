@@ -1,3 +1,4 @@
 minio
 .idea
 airflow/logs
+.qodo

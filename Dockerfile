@@ -1,15 +1,47 @@
-FROM bitnami/spark:latest
+# This Dockerfile is taken from https://github.com/mvillarrealb/docker-spark-cluster/blob/master/docker-compose.yml
+# and updated to install the Scala 2.13 version of Spark 3.2.0
 
-USER root
+FROM eclipse-temurin:21-jre-jammy as builder
 
-# Install curl
-RUN apt-get update && apt-get install -y curl iputils-ping && apt-get clean
+# Add Dependencies for PySpark
+RUN apt-get update && apt-get install -y curl vim wget software-properties-common ssh net-tools ca-certificates python3 python3-pip python3-numpy python3-matplotlib python3-scipy python3-pandas python3-simpy
 
-# Install AWS Hadoop libraries
-RUN curl -O https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && \
-    mv hadoop-aws-3.3.4.jar /opt/bitnami/spark/jars/
+RUN update-alternatives --install "/usr/bin/python" "python" "$(which python3)" 1
 
-RUN curl -O https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.12.262/aws-java-sdk-bundle-1.12.262.jar && \
-    mv aws-java-sdk-bundle-1.12.262.jar /opt/bitnami/spark/jars/
+# Fix the value of PYTHONHASHSEED
+# Note: this is needed when you use Python 3.3 or greater
+ENV SPARK_VERSION=3.5.5 \
+SCALA_VERSION=2.13 \
+HADOOP_VERSION=3 \
+SPARK_HOME=/opt/spark \
+PYTHONHASHSEED=1
 
-USER 1001
+RUN wget --no-verbose -O apache-spark.tgz "https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}-scala${SCALA_VERSION}.tgz" \
+&& mkdir -p /opt/spark \
+&& tar -xf apache-spark.tgz -C /opt/spark --strip-components=1 \
+&& rm apache-spark.tgz
+
+
+FROM builder as apache-spark
+
+WORKDIR /opt/spark
+
+ENV SPARK_MASTER_PORT=7077 \
+SPARK_MASTER_WEBUI_PORT=8080 \
+SPARK_LOG_DIR=/opt/spark/logs \
+SPARK_MASTER_LOG=/opt/spark/logs/spark-master.out \
+SPARK_WORKER_LOG=/opt/spark/logs/spark-worker.out \
+SPARK_WORKER_WEBUI_PORT=8080 \
+SPARK_WORKER_PORT=7000
+
+EXPOSE 8080 7077 7000
+
+RUN mkdir -p $SPARK_LOG_DIR && \
+touch $SPARK_MASTER_LOG && \
+touch $SPARK_WORKER_LOG && \
+ln -sf /dev/stdout $SPARK_MASTER_LOG && \
+ln -sf /dev/stdout $SPARK_WORKER_LOG
+
+COPY start-spark.sh /
+
+CMD ["/bin/bash", "/start-spark.sh"]

@@ -17,9 +17,12 @@ def download_parquet(**kwargs):
     extension: str = ".parquet"
 
     month: str = pendulum.now().subtract(months=2).format('YYYY-MM')
+    file_name = f"{filename}_{month}{extension}"
+    full_url = url + file_name
     try:
-        ___.___(___,
-                            ___)
+        print(f"Downloading from {full_url}")
+        request.urlretrieve(full_url, file_name)
+        print(f"Downloaded file saved as {file_name}")
     except urllib.error.URLError as e:
         raise RuntimeError(f"Failed to download the parquet file : {str(e)}") from e
 
@@ -32,27 +35,44 @@ def upload_file(**kwargs):
     client = Minio(
         "minio:9000",
         secure=False,
-        access_key="minio",
-        secret_key="minio123"
+        access_key="vPNJQMl0tM2TfedU582C",
+        secret_key="V2njsRt5phGd0sSpjwzWTT87Nz36KgmSrEiHVXLC"
     )
-    bucket: str = 'rawnyc'
+    bucket: str = 'yellow-taxi'
+
+    found = client.bucket_exists(bucket)
+    if not found:
+        client.make_bucket(bucket)
+        print(f"Created bucket: {bucket}")
+    else:
+        print(f"Bucket {bucket} already exists.")
 
     month: str = pendulum.now().subtract(months=2).format('YYYY-MM')
-    print(client.list_buckets())
+    file_name = f"yellow_tripdata_{month}.parquet"
+    print(file_name)
+    try:
+        client.fput_object(
+            bucket_name=bucket,
+            object_name=file_name,
+            file_path=file_name
+        )
+        print(f"Uploaded {file_name} to bucket {bucket}.")
+    except S3Error as err:
+        raise RuntimeError(f"Failed to upload file to MinIO: {err}") from err
+    finally:
+        if os.path.exists(file_name):
+            os.remove(file_name)
+            print(f"Deleted local file {file_name} after upload.")
 
-    client.___(
-        bucket_name=___,
-        object_name=___,
-        file_path=___)
     # On supprime le fichié récement téléchargés, pour éviter la redondance. On suppose qu'en arrivant ici, l'ajout est
     # bien réalisé
-    os.remove(os.path.join("./", "yellow_tripdata_" + month + ".parquet"))
+    # os.remove(os.path.join("./", "yellow_tripdata_" + month + ".parquet"))
 
 
 ###############################################
 with DAG(dag_id='Grab NYC Data to Minio',
          start_date=days_ago(1),
-         schedule_interval=None,
+         schedule_interval="@once",
          catchup=False,
          tags=['minio/read/write'],
          ) as dag:
@@ -61,12 +81,12 @@ with DAG(dag_id='Grab NYC Data to Minio',
     t1 = PythonOperator(
         task_id='download_parquet',
         provide_context=True,
-        python_callable=___
+        python_callable=download_parquet
     )
     t2 = PythonOperator(
         task_id='upload_file_task',
         provide_context=True,
-        python_callable=___
+        python_callable=upload_file
     )
 ###############################################
 
